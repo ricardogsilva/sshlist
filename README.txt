@@ -1,6 +1,6 @@
 # Instructions
 
-1. Copy file sshlist.py (this file) to /usr/local/bin
+1. Copy file sshlist.py to /usr/local/bin
 2. Launch sshlist.py
 3. Or better yet, add it to gnome startup programs list so it's run on login.
 
