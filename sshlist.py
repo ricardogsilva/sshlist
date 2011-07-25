@@ -49,12 +49,15 @@ class sshList:
             md.set_markup("<b>sshlist v%s</b>" % self.ver)
             md.format_secondary_markup("""A simple sshmenu like replacement for appindicator menu.
 
-            To add items to menu, simple edit the file <i>.sshlist</i> in your home directory (one host per line). The line is directly appended to the ssh command.
+Author: anil.verve@gmail.com
+http://www.gulecha.org
+Updated: phoolish@gmail.com
 
-            Author: anil.verve@gmail.com
-            http://www.gulecha.org
-            Updated: phoolish@gmail.com
-            """)
+# Instructions
+
+1. Copy file sshlist.py to /usr/local/bin
+2. Launch sshlist.py
+3. Or better yet, add it to gnome startup programs list so it's run on login.""")
             md.run()
             md.destroy()
         elif command == "_settings":
@@ -224,6 +227,10 @@ class sshList:
         menu_items.show()
         self.menu.append(menu_items)
 
+        quit_item = gtk.MenuItem("Quit")
+        quit_item.connect("activate", gtk.main_quit, None)
+        quit_item.show()
+        self.menu.append(quit_item)
 
 if __name__ == "__main__":
     sshList()
