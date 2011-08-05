@@ -5,11 +5,19 @@
 import gtk
 import appindicator
 import os
+from subprocess import Popen, PIPE
 import pynotify
+
+# TODO
+# - Change all the spacing, variable and function names to conform to PEP8
+# - Finish the runProgram (soon to be renamed run_program) method's new 
+# implementation, using the subprocess.Popen class, instead of the old
+# os.popen
+# Review the rest of the code
 
 class sshList:
     ver = "0.2"
-    list_path = os.getenv("HOME")+"/.sshlist"
+    list_path = os.path.join(os.getenv("HOME"), ".sshlist")
 
 
     def __init__(self):
@@ -40,6 +48,14 @@ class sshList:
         output=fd.read()
         exitvalue=fd.close()
         return (output, exitvalue)
+
+    def runProgram(self, program='gnome-terminal', progOptions='-x', 
+                   sshCommand='ssh', sshOptions='-Y', otherOptions=''):
+        otherOpts = otherOptions.split()
+        cmdList = [program, progOptions, sshCommand, sshOptions] + otherOpts
+        neWProcess = Popen(cmdList, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        # work-in-progress...
+
 
 
     def menuitemResponse(self, widget, command):
