@@ -71,8 +71,7 @@ class SSHList:
             md.run()
             md.destroy()
         elif command == "_settings":
-            #self.settings_dialogue()
-            pass
+            self.settings_dialogue()
         else:
             self.run_program(command)
 
@@ -94,12 +93,19 @@ class SSHList:
 
         table = gtk.Table(1, 1, False)
 
-        tree_store = gtk.TreeStore(str, str)
+        treeStore = gtk.TreeStore(str, str, str, str, str, str)
+        settings = self._read_settings()
 
         # read in the ssh hosts list from ~/.sshlist
         hosts = open(self.listPath, "r").read()
         hostlist = hosts.split("\n")
+        for title, hostsettings in hostlist.iteritems():
+            treeStore.append(None, hostsettings.values())
+        self.treeView = gtk.TreeView(treeStore)
+        self.selection = self.treeView.get_selection()
+        self.selection.set_mode(gtk.SELECTION_SINGLE)
 
+        # estou aqui
         # create some
         newIter = None
         tempIter = None
@@ -114,36 +120,36 @@ class SSHList:
                     command = hostparts.pop()
                     #first section is title
                     title = hostparts.pop()
-                tempIter = tree_store.append(None, [title, command, ])
+                tempIter = treeStore.append(None, [title, command, ])
             if newIter == None and tempIter != None:
                 newIter = tempIter
 
-        self.tree_view = gtk.TreeView(tree_store)
+        self.treeView = gtk.TreeView(treeStore)
 
-        self.selection = self.tree_view.get_selection()
+        self.selection = self.treeView.get_selection()
         self.selection.set_mode(gtk.SELECTION_SINGLE)
         if newIter:
             self.selection.select_iter(newIter)
 
-        host_tree_view_column = gtk.TreeViewColumn('Title')
+        host_treeView_column = gtk.TreeViewColumn('Title')
 
-        self.tree_view.append_column(host_tree_view_column)
+        self.treeView.append_column(host_treeView_column)
 
         host_cell = gtk.CellRendererText()
         host_cell.set_property('editable', True)
-        host_cell.connect('edited', self.host_edit, (tree_store, 0))
-        host_tree_view_column.pack_start(host_cell, True)
-        host_tree_view_column.add_attribute(host_cell, 'text', 0)
+        host_cell.connect('edited', self.host_edit, (treeStore, 0))
+        host_treeView_column.pack_start(host_cell, True)
+        host_treeView_column.add_attribute(host_cell, 'text', 0)
 
-        command_tree_view_column = gtk.TreeViewColumn('Command')
+        command_treeView_column = gtk.TreeViewColumn('Command')
 
-        self.tree_view.append_column(command_tree_view_column)
+        self.treeView.append_column(command_treeView_column)
         command_cell = gtk.CellRendererText()
         command_cell.set_property('editable', True)
-        command_cell.connect('edited', self.host_edit, (tree_store, 1))
-        command_tree_view_column.pack_start(command_cell, True)
-        command_tree_view_column.add_attribute(command_cell, 'text', 1)
-        table.attach(self.tree_view, 0, 1, 0, 3)
+        command_cell.connect('edited', self.host_edit, (treeStore, 1))
+        command_treeView_column.pack_start(command_cell, True)
+        command_treeView_column.add_attribute(command_cell, 'text', 1)
+        table.attach(self.treeView, 0, 1, 0, 3)
         table.attach(add_ssh, 1, 2, 0, 1)
         table.attach(save_ssh, 1, 2, 1, 2)
         table.attach(delete_ssh, 1, 2, 2, 3)
@@ -155,7 +161,7 @@ class SSHList:
 
 
     def add_host(self, widget, data = None):
-        treeModel = self.tree_view.get_model()
+        treeModel = self.treeView.get_model()
         newIter = treeModel.append(None, ['', ''])
         self.selection.select_iter(newIter)
 
@@ -178,7 +184,7 @@ class SSHList:
             sshFile.write("# user@host.com\n")
             sshFile.write("# title:::user@host.com\n")
 
-            treeModel = self.tree_view.get_model()
+            treeModel = self.treeView.get_model()
             for hostIter in treeModel:
                 name, command = hostIter
                 sshFile.write(name + ":::" + command + "\n")
