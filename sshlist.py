@@ -8,22 +8,17 @@ import os
 from subprocess import Popen, PIPE
 import pynotify
 import logging
-import configParser
+import ConfigParser
 
 logging.basicConfig(level=logging.DEBUG)
 
 # TODO
-# - Change all the spacing, variable and function names to conform to PEP8
-# - Finish the run_program (soon to be renamed run_program) method's new 
-# implementation, using the subprocess.Popen class, instead of the old
-# os.popen
-# - Review the rest of the code
-# - Use python's configParser module to store the settings
 # - add logging
+# - update the GUI for configuration of the settings file
 
 class SSHList:
     version = "0.2"
-    listPath = os.path.join(os.getenv("HOME"), ".sshlist")
+    listPath = os.path.join(os.getenv("HOME"), ".sshlist.ini")
 
     def __init__(self):
         self.check_file()
@@ -43,21 +38,13 @@ class SSHList:
         self.indicator.set_status(appindicator.STATUS_ACTIVE)
         self.indicator.set_attention_icon("connect_creating")
 
-    #def run_program(self, command):
-    #    cmd = "gnome-terminal -x ssh " + command
-    #    #returns (output, exit value)
-    #    fd=os.popen(cmd, "r")
-    #    output=fd.read()
-    #    exitvalue=fd.close()
-    #    return (output, exitvalue)
-
-    def run_program(self, sshHost, sshUser, sshPassword=None, 
-                    program='gnome-terminal', progOptions='-x', 
-                    sshCommand='ssh', sshOptions='-Y', otherOptions=''):
-        sshLogin = '@'.join(sshUser, sshHost)
-        otherOpts = otherOptions.split()
-        cmdList = [program, progOptions, sshCommand, sshOptions, sshLogin] + \
-                  otherOpts
+    def run_program(self, settings):
+        sshLogin = '@'.join((settings['username'], settings['host']))
+        sshOptions = settings['sshOptions'].split()
+        cmdList = ['gnome-terminal', '--window-with-profile=%s' % \
+                   settings['profile'], '-x', settings['sshCommand']]
+        cmdList += sshOptions
+        cmdList.append(sshLogin)
         newProcess = Popen(cmdList, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         stdout, stderr = newProcess.communicate()
         returnCode = newProcess.returncode
@@ -84,7 +71,8 @@ class SSHList:
             md.run()
             md.destroy()
         elif command == "_settings":
-            self.settings_dialogue()
+            #self.settings_dialogue()
+            pass
         else:
             self.run_program(command)
 
@@ -209,52 +197,97 @@ class SSHList:
             self.build_menu()
             self.indicator.set_menu(self.menu)
 
+    def _read_settings(self):
+        '''
+        Parse the configuration file.
+        '''
+
+        settings = dict()
+        parser = ConfigParser.SafeConfigParser()
+        existingFiles = parser.read(self.listPath)
+        for sectionTitle in parser.sections():
+            settings[sectionTitle] = {
+                    'profile' : parser.get(sectionTitle, 'profile'),
+                    'sshCommand' : parser.get(sectionTitle, 'sshCommand'),
+                    'sshOptions' : parser.get(sectionTitle, 'sshOptions'),
+                    'host' : parser.get(sectionTitle, 'host'),
+                    'username' : parser.get(sectionTitle, 'username'),
+                        }
+        return settings
+
     def build_menu(self):
         # create a menu
         self.menu = gtk.Menu()
 
-        # read in the ssh hosts list from ~/.sshlist
-        hosts = open(self.listPath, "r").read()
-        hostlist = hosts.split("\n")
-
-        # create some
-        for hostInfo in hostlist:
-            # if it isn't a comment create a menu item
-            if not hostInfo.startswith("#") and hostInfo != "":
-                #hostparts = hostInfo.split(":::")
-                title, command = hostInfo.split(':::')
-                #title = hostInfo
-                #command = hostInfo
-                if len(hostparts) > 1:
-                    #second is ssh command
-                    command = hostparts.pop()
-                    #first section is title
-                    title = hostparts.pop()
-                menuItems = gtk.MenuItem(title)
-                self.menu.append(menuItems)
-                # this is where you would connect your menu item up with a function:
-                menuItems.connect("activate", self.menu_item_response, command)
-                # show the items
-                menuItems.show()
-
+        hostSettings = self._read_settings()
+        for hostTitle, theSettings in hostSettings.iteritems():
+            menuItem = gtk.MenuItem(hostTitle)
+            self.menu.append(menuItem)
+            menuItem.connect("activate", self.menu_item_response, theSettings)
+            menuItem.show()
         separator = gtk.SeparatorMenuItem()
         separator.show()
         self.menu.append(separator)
 
-        menuItems = gtk.MenuItem("Settings")
-        menuItems.connect("activate", self.menu_item_response, "_settings")
-        menuItems.show()
-        self.menu.append(menuItems)
+        menuItem = gtk.MenuItem("Settings")
+        menuItem.connect("activate", self.menu_item_response, "_settings")
+        menuItem.show()
+        self.menu.append(menuItem)
 
-        menuItems = gtk.MenuItem("About")
-        menuItems.connect("activate", self.menu_item_response, "_about")
-        menuItems.show()
-        self.menu.append(menuItems)
+        menuItem = gtk.MenuItem("About")
+        menuItem.connect("activate", self.menu_item_response, "_about")
+        menuItem.show()
+        self.menu.append(menuItem)
 
         quit_item = gtk.MenuItem("Quit")
         quit_item.connect("activate", gtk.main_quit, None)
         quit_item.show()
         self.menu.append(quit_item)
 
+#
+#        # read in the ssh hosts list from ~/.sshlist
+#        hosts = open(self.listPath, "r").read()
+#        hostlist = hosts.split("\n")
+#
+#        # create some
+#        for hostInfo in hostlist:
+#            # if it isn't a comment create a menu item
+#            if not hostInfo.startswith("#") and hostInfo != "":
+#                #hostparts = hostInfo.split(":::")
+#                title, command = hostInfo.split(':::')
+#                #title = hostInfo
+#                #command = hostInfo
+#                if len(hostparts) > 1:
+#                    #second is ssh command
+#                    command = hostparts.pop()
+#                    #first section is title
+#                    title = hostparts.pop()
+#                menuItems = gtk.MenuItem(title)
+#                self.menu.append(menuItems)
+#                # this is where you would connect your menu item up with a function:
+#                menuItems.connect("activate", self.menu_item_response, command)
+#                # show the items
+#                menuItems.show()
+#
+#        separator = gtk.SeparatorMenuItem()
+#        separator.show()
+#        self.menu.append(separator)
+#
+#        menuItems = gtk.MenuItem("Settings")
+#        menuItems.connect("activate", self.menu_item_response, "_settings")
+#        menuItems.show()
+#        self.menu.append(menuItems)
+#
+#        menuItems = gtk.MenuItem("About")
+#        menuItems.connect("activate", self.menu_item_response, "_about")
+#        menuItems.show()
+#        self.menu.append(menuItems)
+#
+#        quit_item = gtk.MenuItem("Quit")
+#        quit_item.connect("activate", gtk.main_quit, None)
+#        quit_item.show()
+#        self.menu.append(quit_item)
+#
+
 if __name__ == "__main__":
-    sshList()
+    SSHList()
